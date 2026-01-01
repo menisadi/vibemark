@@ -263,7 +263,9 @@ def scan(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     loc_mode: str = typer.Option("physical", help="LOC mode: physical|nonempty"),
     exclude: List[str] = typer.Option(
-        None, "--exclude", help="Exclude glob for this run (repeatable)"
+        None,
+        "--exclude",
+        help="Exclude glob for this run (repeatable), e.g. src/pkg/*",
     ),
     include_empty: bool = typer.Option(
         False, "--include-empty", help="Include empty files (0 LOC) in scan"
@@ -353,7 +355,7 @@ def normalize_path_arg(root: Path, p: str) -> str:
 
 @app.command()
 def exclude_add(
-    globs: List[str] = typer.Argument(..., help="Exclude glob(s)"),
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
     """
@@ -378,7 +380,7 @@ def exclude_add(
 
 @app.command()
 def exclude_remove(
-    globs: List[str] = typer.Argument(..., help="Exclude glob(s)"),
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
     """

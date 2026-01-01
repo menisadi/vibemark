@@ -4,23 +4,36 @@ Track how much code you have actually read, by file and by LOC. `vibemark` scans
 repository for Python files, stores progress in a local state file, and provides
 simple commands to update or visualize your reading status.
 
+## Installation
+
+The main way to use vibemark is via PyPI under the `vibemark` package:
+
+- `pipx install vibemark`
+- `pip install vibemark`
+- `uv tool install vibemark` (recommended)
+
 ## Quickstart
 
 - Scan the repo and initialize progress:
-  - `uv run vibemark scan`
+  - `vibemark scan`
 - Show overall progress and largest remaining files:
-  - `uv run vibemark stats`
+  - `vibemark stats`
 - Mark a file as fully read:
-  - `uv run vibemark done src/vibemark/cli.py`
+  - `vibemark done src/vibemark/cli.py`
 - Set partial progress for a file:
-  - `uv run vibemark set src/vibemark/cli.py 120`
+  - `vibemark set src/vibemark/cli.py 120`
+- Exclude a folder for a run (glob):
+  - `vibemark scan --exclude "src/vendor/*"`
+- Persistently exclude a folder (saved in `.vibemark.json`):
+  - `vibemark exclude-add "src/vendor/*"`
 
 ## How it works
 
 `vibemark` looks for `*.py` files under the repo root, applies default exclusions
 (e.g., `.git/`, `.venv/`, `build/`), and writes state to `.vibemark.json` in the
-root directory. Use `vibemark update` to rescan and optionally reset progress for
-changed files.
+root directory. You can add saved exclude globs like `src/vendor/*` or pass
+`--exclude` to a single scan. Use `vibemark update` to rescan and optionally reset
+progress for changed files.
 
 ## Development
 
