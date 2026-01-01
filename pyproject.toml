@@ -1,0 +1,20 @@
+[project]
+name = "viberead"
+version = "0.1.0"
+description = "If you are not writing it, you should at least read it."
+readme = "README.md"
+authors = [
+    { name = "menisadi", email = "menisadi@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "rich>=14.2.0",
+    "typer>=0.21.0",
+]
+
+[project.scripts]
+viberead = "viberead.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
