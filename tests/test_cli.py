@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import typer
 
-from viberead.cli import DEFAULT_EXCLUDES, count_loc, is_excluded, normalize_path_arg
+from vibemark.cli import DEFAULT_EXCLUDES, count_loc, is_excluded, normalize_path_arg
 
 
 def test_count_loc_modes(tmp_path: Path) -> None:
@@ -16,7 +16,7 @@ def test_count_loc_modes(tmp_path: Path) -> None:
 
 def test_is_excluded_defaults() -> None:
     assert is_excluded(".git/config", DEFAULT_EXCLUDES)
-    assert not is_excluded("src/viberead/cli.py", DEFAULT_EXCLUDES)
+    assert not is_excluded("src/vibemark/cli.py", DEFAULT_EXCLUDES)
 
 
 def test_normalize_path_arg(tmp_path: Path) -> None:

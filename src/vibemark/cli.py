@@ -14,11 +14,11 @@ from rich.prompt import Prompt, Confirm
 from rich import box
 
 app = typer.Typer(
-    add_completion=False, help="viberead — track code reading progress by LOC"
+    add_completion=False, help="vibemark — track code reading progress by LOC"
 )
 console = Console()
 
-STATE_FILENAME = ".viberead.json"
+STATE_FILENAME = ".vibemark.json"
 
 DEFAULT_EXCLUDES = [
     ".git/*",
@@ -144,7 +144,7 @@ def totals(items: Dict[str, FileProgress]) -> Tuple[int, int]:
 
 
 def render_table(items: Dict[str, FileProgress], limit: int = 200) -> Table:
-    t = Table(title="viberead", box=box.SIMPLE_HEAVY)
+    t = Table(title="vibemark", box=box.SIMPLE_HEAVY)
     t.add_column("#", style="dim", width=4, justify="right")
     t.add_column("Status", width=8)
     t.add_column("Read", justify="right", width=12)
@@ -183,7 +183,7 @@ def scan(
     ),
 ) -> None:
     """
-    Scan repo for Python files and create/update .viberead.json
+    Scan repo for Python files and create/update .vibemark.json
     """
     root = resolve_root(root)
     ex = (exclude or []) + DEFAULT_EXCLUDES
@@ -217,7 +217,7 @@ def stats(
     root = resolve_root(root)
     items = load_state(root)
     if not items:
-        console.print("[yellow]No state found. Run[/yellow] viberead scan")
+        console.print("[yellow]No state found. Run[/yellow] vibemark scan")
         raise typer.Exit(1)
 
     total, read = totals(items)
@@ -246,7 +246,7 @@ def stats(
 def require_state(root: Path) -> Dict[str, FileProgress]:
     items = load_state(root)
     if not items:
-        console.print("[yellow]No state found. Run[/yellow] viberead scan")
+        console.print("[yellow]No state found. Run[/yellow] vibemark scan")
         raise typer.Exit(1)
     return items
 
@@ -351,7 +351,7 @@ def update(
     # Handle removed files
     if removed:
         console.print(f"[yellow]{len(removed)} files disappeared from scan.[/yellow]")
-        if Confirm.ask("Remove them from viberead state?", default=False):
+        if Confirm.ask("Remove them from vibemark state?", default=False):
             for rel in removed:
                 items.pop(rel, None)
 
@@ -432,7 +432,7 @@ def dash(
         console.print(
             "\nCommands: [bold]pick[/bold] (number) | [bold]set[/bold] | [bold]done[/bold] | [bold]reset[/bold] | [bold]stats[/bold] | [bold]save[/bold] | [bold]q[/bold]"
         )
-        cmd = Prompt.ask("viberead").strip().lower()
+        cmd = Prompt.ask("vibemark").strip().lower()
 
         if cmd in {"q", "quit", "exit"}:
             save_state(root, items)

@@ -1,5 +1,5 @@
 [project]
-name = "viberead"
+name = "vibemark"
 version = "0.1.0"
 description = "If you are not writing it, you should at least read it."
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-viberead = "viberead.cli:app"
+vibemark = "vibemark.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]
