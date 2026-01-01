@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import fnmatch
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -14,7 +13,9 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm
 from rich import box
 
-app = typer.Typer(add_completion=False, help="viberead — track code reading progress by LOC")
+app = typer.Typer(
+    add_completion=False, help="viberead — track code reading progress by LOC"
+)
 console = Console()
 
 STATE_FILENAME = ".viberead.json"
@@ -150,9 +151,16 @@ def render_table(items: Dict[str, FileProgress], limit: int = 200) -> Table:
     t.add_column("LOC", justify="right", width=8)
     t.add_column("File", overflow="fold")
 
-    rows = sorted(items.values(), key=lambda fp: (fp.status != "unread", fp.status != "partial", fp.path))
+    rows = sorted(
+        items.values(),
+        key=lambda fp: (fp.status != "unread", fp.status != "partial", fp.path),
+    )
     for i, fp in enumerate(rows[:limit], start=1):
-        status = {"unread": "[dim]unread[/dim]", "partial": "[yellow]partial[/yellow]", "done": "[green]done[/green]"}[fp.status]
+        status = {
+            "unread": "[dim]unread[/dim]",
+            "partial": "[yellow]partial[/yellow]",
+            "done": "[green]done[/green]",
+        }[fp.status]
         read_str = f"{fp.read_loc}/{fp.total_loc}"
         t.add_row(str(i), status, read_str, str(fp.total_loc), fp.path)
     return t
@@ -170,7 +178,9 @@ def resolve_root(root: Optional[Path]) -> Path:
 def scan(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     loc_mode: str = typer.Option("physical", help="LOC mode: physical|nonempty"),
-    exclude: List[str] = typer.Option(None, "--exclude", help="Exclude glob (repeatable)"),
+    exclude: List[str] = typer.Option(
+        None, "--exclude", help="Exclude glob (repeatable)"
+    ),
 ) -> None:
     """
     Scan repo for Python files and create/update .viberead.json
@@ -191,7 +201,9 @@ def scan(
 
     save_state(root, new_state)
     total, read = totals(new_state)
-    console.print(f"[green]Scanned[/green] {len(new_state)} files. Total {read}/{total} LOC read.")
+    console.print(
+        f"[green]Scanned[/green] {len(new_state)} files. Total {read}/{total} LOC read."
+    )
 
 
 @app.command()
@@ -210,7 +222,9 @@ def stats(
 
     total, read = totals(items)
     pct = (read / total * 100.0) if total else 0.0
-    console.print(f"Total: [bold]{read}/{total}[/bold] LOC read  ([bold]{pct:.1f}%[/bold])")
+    console.print(
+        f"Total: [bold]{read}/{total}[/bold] LOC read  ([bold]{pct:.1f}%[/bold])"
+    )
 
     remaining = sorted(
         (fp for fp in items.values() if fp.read_loc < fp.total_loc),
@@ -251,7 +265,9 @@ def normalize_path_arg(root: Path, p: str) -> str:
 
 @app.command()
 def set(
-    path: str = typer.Argument(..., help="File path (relative to root or absolute under root)"),
+    path: str = typer.Argument(
+        ..., help="File path (relative to root or absolute under root)"
+    ),
     read_loc: int = typer.Argument(..., help="How many LOC you read in this file"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
@@ -309,7 +325,9 @@ def reset(
 def update(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     loc_mode: str = typer.Option("physical", help="LOC mode: physical|nonempty"),
-    exclude: List[str] = typer.Option(None, "--exclude", help="Exclude glob (repeatable)"),
+    exclude: List[str] = typer.Option(
+        None, "--exclude", help="Exclude glob (repeatable)"
+    ),
 ) -> None:
     """
     Re-scan and detect modified files (LOC or mtime). Prompt to reset progress per changed file.
@@ -355,7 +373,9 @@ def update(
     # Add any new files
     new_files = [rel for rel in scanned.keys() if rel not in items]
     if new_files:
-        console.print(f"\n[cyan]{len(new_files)} new files found.[/cyan] Adding as unread.")
+        console.print(
+            f"\n[cyan]{len(new_files)} new files found.[/cyan] Adding as unread."
+        )
         for rel in new_files:
             total, mtime = scanned[rel]
             items[rel] = FileProgress(rel, total, 0, mtime)
@@ -409,7 +429,9 @@ def dash(
         table = render_table(items, limit=300)
         console.print(table)
 
-        console.print("\nCommands: [bold]pick[/bold] (number) | [bold]set[/bold] | [bold]done[/bold] | [bold]reset[/bold] | [bold]stats[/bold] | [bold]save[/bold] | [bold]q[/bold]")
+        console.print(
+            "\nCommands: [bold]pick[/bold] (number) | [bold]set[/bold] | [bold]done[/bold] | [bold]reset[/bold] | [bold]stats[/bold] | [bold]save[/bold] | [bold]q[/bold]"
+        )
         cmd = Prompt.ask("viberead").strip().lower()
 
         if cmd in {"q", "quit", "exit"}:
@@ -434,12 +456,19 @@ def dash(
 
         if len(parts) >= 2 and parts[0] == "pick" and parts[1].isdigit():
             idx = int(parts[1])
-            rows = sorted(items.values(), key=lambda fp: (fp.status != "unread", fp.status != "partial", fp.path))
+            rows = sorted(
+                items.values(),
+                key=lambda fp: (fp.status != "unread", fp.status != "partial", fp.path),
+            )
             if not (1 <= idx <= len(rows)):
                 continue
             fp = rows[idx - 1]
-            console.print(f"\nSelected: [bold]{fp.path}[/bold] ({fp.read_loc}/{fp.total_loc})")
-            action = Prompt.ask("Action", choices=["set", "done", "reset", "back"], default="back")
+            console.print(
+                f"\nSelected: [bold]{fp.path}[/bold] ({fp.read_loc}/{fp.total_loc})"
+            )
+            action = Prompt.ask(
+                "Action", choices=["set", "done", "reset", "back"], default="back"
+            )
             if action == "set":
                 val = int(Prompt.ask("Read LOC", default=str(fp.read_loc)))
                 fp.read_loc = val
