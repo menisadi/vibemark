@@ -178,6 +178,7 @@ def scan_repo(
     root: Path,
     exclude: List[str],
     loc_mode: str,
+    include_empty: bool,
 ) -> Dict[str, Tuple[int, int]]:
     """
     Returns mapping rel_path -> (total_loc, mtime_ns)
@@ -191,6 +192,8 @@ def scan_repo(
             continue
         st = path.stat()
         total = count_loc(path, mode=loc_mode)
+        if not include_empty and total == 0:
+            continue
         results[rel] = (total, st.st_mtime_ns)
     return results
 
@@ -262,6 +265,9 @@ def scan(
     exclude: List[str] = typer.Option(
         None, "--exclude", help="Exclude glob for this run (repeatable)"
     ),
+    include_empty: bool = typer.Option(
+        False, "--include-empty", help="Include empty files (0 LOC) in scan"
+    ),
 ) -> None:
     """
     Scan repo for Python files and create/update .vibemark.json
@@ -270,7 +276,7 @@ def scan(
     saved_excludes = load_excludes(root)
     ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     existing = load_state(root)
-    scanned = scan_repo(root, ex, loc_mode=loc_mode)
+    scanned = scan_repo(root, ex, loc_mode=loc_mode, include_empty=include_empty)
 
     # Add/update scanned files, keep read_loc if present
     new_state: Dict[str, FileProgress] = {}
@@ -493,6 +499,9 @@ def update(
     exclude: List[str] = typer.Option(
         None, "--exclude", help="Exclude glob for this run (repeatable)"
     ),
+    include_empty: bool = typer.Option(
+        False, "--include-empty", help="Include empty files (0 LOC) in scan"
+    ),
 ) -> None:
     """
     Re-scan and detect modified files (LOC or mtime). Prompt to reset progress per changed file.
@@ -501,7 +510,7 @@ def update(
     saved_excludes = load_excludes(root)
     ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     items = require_state(root)
-    scanned = scan_repo(root, ex, loc_mode=loc_mode)
+    scanned = scan_repo(root, ex, loc_mode=loc_mode, include_empty=include_empty)
 
     changed: List[Tuple[str, FileProgress, int, int]] = []
     removed: List[str] = []
