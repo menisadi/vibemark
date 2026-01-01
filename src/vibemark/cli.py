@@ -6,7 +6,7 @@ import fnmatch
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 import typer
 from rich.console import Console
@@ -57,6 +57,19 @@ def count_loc(path: Path, mode: str = "physical") -> int:
     return len(lines)
 
 
+def coerce_int(value: object) -> int:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
 @dataclass
 class FileProgress:
     path: str
@@ -95,13 +108,20 @@ def load_state_payload(root: Path) -> Dict[str, object]:
 def load_state(root: Path) -> Dict[str, FileProgress]:
     raw = load_state_payload(root)
     files = raw.get("files", {})
+    if not isinstance(files, dict):
+        return {}
     out: Dict[str, FileProgress] = {}
     for rel, meta in files.items():
+        if not isinstance(rel, str):
+            continue
+        if not isinstance(meta, dict):
+            continue
+        meta_dict = cast(dict[str, object], meta)
         out[rel] = FileProgress(
             path=rel,
-            total_loc=int(meta.get("total_loc", 0)),
-            read_loc=int(meta.get("read_loc", 0)),
-            mtime_ns=int(meta.get("mtime_ns", 0)),
+            total_loc=coerce_int(meta_dict.get("total_loc", 0)),
+            read_loc=coerce_int(meta_dict.get("read_loc", 0)),
+            mtime_ns=coerce_int(meta_dict.get("mtime_ns", 0)),
         )
         out[rel].clamp()
     return out
