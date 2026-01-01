@@ -14,6 +14,8 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm
 from rich import box
 
+from vibemark import __version__
+
 app = typer.Typer(
     add_completion=False, help="vibemark — track code reading progress by LOC"
 )
@@ -228,6 +230,29 @@ def resolve_root(root: Optional[Path]) -> Path:
     if not r.exists():
         raise typer.BadParameter(f"Root does not exist: {r}")
     return r
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        help="Show the vibemark version and exit",
+        is_eager=True,
+        callback=_version_callback,
+    ),
+) -> None:
+    """
+    vibemark — track code reading progress by LOC
+    """
+    return None
 
 
 @app.command()

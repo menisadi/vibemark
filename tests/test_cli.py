@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 import typer
+from typer.testing import CliRunner
 
 from vibemark.cli import (
     DEFAULT_EXCLUDES,
+    app,
     count_loc,
     is_excluded,
     load_excludes,
@@ -14,6 +16,9 @@ from vibemark.cli import (
     save_state,
     scan,
 )
+from vibemark import __version__
+
+runner = CliRunner()
 
 
 def test_count_loc_modes(tmp_path: Path) -> None:
@@ -63,3 +68,9 @@ def test_saved_excludes_applied_to_scan(tmp_path: Path) -> None:
     items = load_state(tmp_path)
     assert "keep.py" in items
     assert "skip/ignore.py" not in items
+
+
+def test_version_flag_prints_version() -> None:
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
