@@ -1,6 +1,7 @@
 #!/usr/bin/env -S uv run
 from __future__ import annotations
 
+import builtins
 import fnmatch
 import json
 from dataclasses import dataclass
@@ -84,11 +85,15 @@ def state_path(root: Path) -> Path:
     return root / STATE_FILENAME
 
 
-def load_state(root: Path) -> Dict[str, FileProgress]:
+def load_state_payload(root: Path) -> Dict[str, object]:
     p = state_path(root)
     if not p.exists():
-        return {}
-    raw = json.loads(p.read_text(encoding="utf-8"))
+        return {"version": 1, "files": {}, "excludes": []}
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def load_state(root: Path) -> Dict[str, FileProgress]:
+    raw = load_state_payload(root)
     files = raw.get("files", {})
     out: Dict[str, FileProgress] = {}
     for rel, meta in files.items():
@@ -102,8 +107,35 @@ def load_state(root: Path) -> Dict[str, FileProgress]:
     return out
 
 
-def save_state(root: Path, items: Dict[str, FileProgress]) -> None:
+def normalize_exclude_glob(glob: str) -> str:
+    return glob.strip().replace("\\", "/")
+
+
+def normalize_excludes(globs: List[str]) -> List[str]:
+    seen = builtins.set()
+    normalized: List[str] = []
+    for glob in globs:
+        norm = normalize_exclude_glob(glob)
+        if norm and norm not in seen:
+            normalized.append(norm)
+            seen.add(norm)
+    return normalized
+
+
+def load_excludes(root: Path) -> List[str]:
+    raw = load_state_payload(root)
+    excludes = raw.get("excludes", [])
+    if not isinstance(excludes, list):
+        return []
+    return normalize_excludes([str(g) for g in excludes])
+
+
+def save_state(
+    root: Path, items: Dict[str, FileProgress], excludes: Optional[List[str]] = None
+) -> None:
     p = state_path(root)
+    if excludes is None:
+        excludes = load_excludes(root)
     files = {
         rel: {
             "total_loc": fp.total_loc,
@@ -112,7 +144,11 @@ def save_state(root: Path, items: Dict[str, FileProgress]) -> None:
         }
         for rel, fp in sorted(items.items(), key=lambda kv: kv[0])
     }
-    payload = {"version": 1, "files": files}
+    payload = {
+        "version": 1,
+        "files": files,
+        "excludes": normalize_excludes(excludes),
+    }
     p.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
@@ -179,14 +215,15 @@ def scan(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     loc_mode: str = typer.Option("physical", help="LOC mode: physical|nonempty"),
     exclude: List[str] = typer.Option(
-        None, "--exclude", help="Exclude glob (repeatable)"
+        None, "--exclude", help="Exclude glob for this run (repeatable)"
     ),
 ) -> None:
     """
     Scan repo for Python files and create/update .vibemark.json
     """
     root = resolve_root(root)
-    ex = (exclude or []) + DEFAULT_EXCLUDES
+    saved_excludes = load_excludes(root)
+    ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     existing = load_state(root)
     scanned = scan_repo(root, ex, loc_mode=loc_mode)
 
@@ -199,7 +236,7 @@ def scan(
         fp.clamp()
         new_state[rel] = fp
 
-    save_state(root, new_state)
+    save_state(root, new_state, excludes=saved_excludes)
     total, read = totals(new_state)
     console.print(
         f"[green]Scanned[/green] {len(new_state)} files. Total {read}/{total} LOC read."
@@ -261,6 +298,89 @@ def normalize_path_arg(root: Path, p: str) -> str:
             raise typer.BadParameter(f"Path must be under root: {root}")
         return rel
     return path.as_posix().replace("\\", "/")
+
+
+@app.command()
+def exclude_add(
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s)"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Add persistent exclude globs saved in .vibemark.json
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    excludes = load_excludes(root)
+    to_add = normalize_excludes(globs)
+    if not to_add:
+        raise typer.BadParameter("No excludes provided.")
+    new_excludes = normalize_excludes(excludes + to_add)
+    added = [glob for glob in new_excludes if glob not in excludes]
+    save_state(root, items, excludes=new_excludes)
+    if added:
+        console.print("[green]Added excludes:[/green]")
+        for glob in added:
+            console.print(f"- {glob}")
+    else:
+        console.print("[yellow]No new excludes added.[/yellow]")
+
+
+@app.command()
+def exclude_remove(
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s)"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Remove persistent exclude globs from .vibemark.json
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    excludes = load_excludes(root)
+    to_remove = builtins.set(normalize_excludes(globs))
+    if not to_remove:
+        raise typer.BadParameter("No excludes provided.")
+    removed = [glob for glob in excludes if glob in to_remove]
+    new_excludes = [glob for glob in excludes if glob not in to_remove]
+    save_state(root, items, excludes=new_excludes)
+    if removed:
+        console.print("[green]Removed excludes:[/green]")
+        for glob in removed:
+            console.print(f"- {glob}")
+    else:
+        console.print("[yellow]No matching excludes found.[/yellow]")
+
+
+@app.command()
+def exclude_list(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    List default and saved exclude globs.
+    """
+    root = resolve_root(root)
+    saved = load_excludes(root)
+    console.print("[bold]Default excludes[/bold]")
+    for glob in DEFAULT_EXCLUDES:
+        console.print(f"- {glob}")
+    console.print("\n[bold]Saved excludes[/bold]")
+    if not saved:
+        console.print("(none)")
+        return
+    for glob in saved:
+        console.print(f"- {glob}")
+
+
+@app.command()
+def exclude_clear(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Clear all saved exclude globs.
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    save_state(root, items, excludes=[])
+    console.print("[green]Cleared saved excludes.[/green]")
 
 
 @app.command()
@@ -326,14 +446,15 @@ def update(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     loc_mode: str = typer.Option("physical", help="LOC mode: physical|nonempty"),
     exclude: List[str] = typer.Option(
-        None, "--exclude", help="Exclude glob (repeatable)"
+        None, "--exclude", help="Exclude glob for this run (repeatable)"
     ),
 ) -> None:
     """
     Re-scan and detect modified files (LOC or mtime). Prompt to reset progress per changed file.
     """
     root = resolve_root(root)
-    ex = (exclude or []) + DEFAULT_EXCLUDES
+    saved_excludes = load_excludes(root)
+    ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     items = require_state(root)
     scanned = scan_repo(root, ex, loc_mode=loc_mode)
 
@@ -380,7 +501,7 @@ def update(
             total, mtime = scanned[rel]
             items[rel] = FileProgress(rel, total, 0, mtime)
 
-    save_state(root, items)
+    save_state(root, items, excludes=saved_excludes)
     total, read = totals(items)
     console.print(f"\nSaved. Total {read}/{total} LOC read.")
 

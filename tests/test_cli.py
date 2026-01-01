@@ -3,7 +3,17 @@ from pathlib import Path
 import pytest
 import typer
 
-from vibemark.cli import DEFAULT_EXCLUDES, count_loc, is_excluded, normalize_path_arg
+from vibemark.cli import (
+    DEFAULT_EXCLUDES,
+    count_loc,
+    is_excluded,
+    load_excludes,
+    load_state,
+    normalize_excludes,
+    normalize_path_arg,
+    save_state,
+    scan,
+)
 
 
 def test_count_loc_modes(tmp_path: Path) -> None:
@@ -29,3 +39,27 @@ def test_normalize_path_arg(tmp_path: Path) -> None:
 
     with pytest.raises(typer.BadParameter):
         normalize_path_arg(root, str(Path("/").resolve()))
+
+
+def test_normalize_excludes_dedup_posix() -> None:
+    globs = ["foo\\bar/*", "foo/bar/*", "", " "]
+    assert normalize_excludes(globs) == ["foo/bar/*"]
+
+
+def test_load_excludes_missing_state(tmp_path: Path) -> None:
+    assert load_excludes(tmp_path) == []
+
+
+def test_saved_excludes_applied_to_scan(tmp_path: Path) -> None:
+    (tmp_path / "keep.py").write_text("print('keep')\n", encoding="utf-8")
+    skip_dir = tmp_path / "skip"
+    skip_dir.mkdir()
+    (skip_dir / "ignore.py").write_text("print('skip')\n", encoding="utf-8")
+
+    save_state(tmp_path, {}, excludes=["skip/*"])
+
+    scan(root=tmp_path, loc_mode="physical", exclude=None)
+
+    items = load_state(tmp_path)
+    assert "keep.py" in items
+    assert "skip/ignore.py" not in items
