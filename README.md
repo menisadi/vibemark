@@ -32,4 +32,4 @@ changed files.
 ## Requirements
 
 - Python 3.13+
-- `uv` for running and building
+- `uv` for running and building from source
