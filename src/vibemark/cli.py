@@ -568,10 +568,7 @@ def export_md(
     header: str = typer.Option("## Review", help="Markdown header title"),
 ) -> None:
     """
-    Export a markdown checklist similar to your format.
-    - done => [x]
-    - unread/partial => [ ]
-    Adds "READ/TOTAL LOC" for partials.
+    Export a markdown checklist
     """
     root = resolve_root(root)
     items = require_state(root)
