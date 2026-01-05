@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from vibemark.cli import (
     DEFAULT_EXCLUDES,
+    FileProgress,
     app,
     count_loc,
     is_excluded,
@@ -74,3 +75,17 @@ def test_version_flag_prints_version() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert __version__ in result.output
+
+
+def test_export_md_marks_completed_with_x(tmp_path: Path) -> None:
+    items = {
+        "done.py": FileProgress("done.py", total_loc=5, read_loc=5, mtime_ns=0),
+        "todo.py": FileProgress("todo.py", total_loc=5, read_loc=0, mtime_ns=0),
+    }
+    save_state(tmp_path, items)
+
+    result = runner.invoke(app, ["export-md", "--root", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "- [x] done.py" in result.output
+    assert "- [ ] todo.py" in result.output

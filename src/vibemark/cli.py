@@ -582,7 +582,7 @@ def export_md(
             extra = f"  ({fp.read_loc}/{fp.total_loc} read)"
         lines.append(f"- [{checked}] {fp.path}  {fp.total_loc} LOC{extra}")
 
-    console.print("\n".join(lines))
+    console.print("\n".join(lines), markup=False)
 
 
 @app.command()
