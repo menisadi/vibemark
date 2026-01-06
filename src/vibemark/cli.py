@@ -543,7 +543,9 @@ def update(
         for rel, fp, new_total, new_mtime in sorted(changed, key=lambda x: x[0]):
             console.print(f"\n[bold]{rel}[/bold]")
             console.print(f"  was: {fp.read_loc}/{fp.total_loc}  now LOC: {new_total}")
-            if Confirm.ask("Reset progress for this file?", default=False):
+            if fp.read_loc > 0 and Confirm.ask(
+                "Reset progress for this file?", default=False
+            ):
                 fp.read_loc = 0
             # Always update metadata & clamp
             fp.total_loc = new_total
