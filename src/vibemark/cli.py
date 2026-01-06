@@ -316,6 +316,9 @@ def stats(
         f"Total: [bold]{read}/{total}[/bold] LOC read  ([bold]{pct:.1f}%[/bold])"
     )
 
+    if top <= 0:
+        return
+
     remaining = sorted(
         (fp for fp in items.values() if fp.read_loc < fp.total_loc),
         key=lambda fp: (fp.total_loc - fp.read_loc),
@@ -506,7 +509,7 @@ def update(
     ),
 ) -> None:
     """
-    Re-scan and detect modified files (LOC or mtime). Prompt to reset progress per changed file.
+    Re-scan and detect modified files.
     """
     root = resolve_root(root)
     saved_excludes = load_excludes(root)
