@@ -6,11 +6,13 @@ from typer.testing import CliRunner
 
 from vibemark.cli import (
     DEFAULT_EXCLUDES,
+    DEFAULT_EXTENSIONS,
     FileProgress,
     app,
     count_loc,
     is_excluded,
     load_excludes,
+    load_extensions,
     load_state,
     normalize_excludes,
     normalize_path_arg,
@@ -56,6 +58,10 @@ def test_load_excludes_missing_state(tmp_path: Path) -> None:
     assert load_excludes(tmp_path) == []
 
 
+def test_load_extensions_missing_state(tmp_path: Path) -> None:
+    assert load_extensions(tmp_path) == DEFAULT_EXTENSIONS
+
+
 def test_saved_excludes_applied_to_scan(tmp_path: Path) -> None:
     (tmp_path / "keep.py").write_text("print('keep')\n", encoding="utf-8")
     skip_dir = tmp_path / "skip"
@@ -64,11 +70,24 @@ def test_saved_excludes_applied_to_scan(tmp_path: Path) -> None:
 
     save_state(tmp_path, {}, excludes=["skip/*"])
 
-    scan(root=tmp_path, loc_mode="physical", exclude=None)
+    scan(root=tmp_path, loc_mode="physical", exclude=None, ext=None)
 
     items = load_state(tmp_path)
     assert "keep.py" in items
     assert "skip/ignore.py" not in items
+
+
+def test_saved_extensions_applied_to_scan(tmp_path: Path) -> None:
+    (tmp_path / "keep.js").write_text("console.log('keep')\n", encoding="utf-8")
+    (tmp_path / "skip.py").write_text("print('skip')\n", encoding="utf-8")
+
+    save_state(tmp_path, {}, extensions=["js"])
+
+    scan(root=tmp_path, loc_mode="physical", exclude=None, ext=None)
+
+    items = load_state(tmp_path)
+    assert "keep.js" in items
+    assert "skip.py" not in items
 
 
 def test_version_flag_prints_version() -> None:
@@ -94,7 +113,7 @@ def test_export_md_marks_completed_with_x(tmp_path: Path) -> None:
 def test_update_handles_removed_changed_and_new_files(tmp_path: Path) -> None:
     (tmp_path / "a.py").write_text("print('a')\n", encoding="utf-8")
     (tmp_path / "b.py").write_text("print('b')\n", encoding="utf-8")
-    scan(root=tmp_path, loc_mode="physical", exclude=None)
+    scan(root=tmp_path, loc_mode="physical", exclude=None, ext=None)
 
     items = load_state(tmp_path)
     items["a.py"].read_loc = 1

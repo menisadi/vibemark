@@ -36,6 +36,8 @@ DEFAULT_EXCLUDES = [
     ".tox/*",
 ]
 
+DEFAULT_EXTENSIONS = ["py"]
+
 
 def is_excluded(rel: str, exclude_globs: List[str]) -> bool:
     rel = rel.replace("\\", "/")
@@ -103,7 +105,12 @@ def state_path(root: Path) -> Path:
 def load_state_payload(root: Path) -> Dict[str, object]:
     p = state_path(root)
     if not p.exists():
-        return {"version": 1, "files": {}, "excludes": []}
+        return {
+            "version": 1,
+            "files": {},
+            "excludes": [],
+            "extensions": DEFAULT_EXTENSIONS,
+        }
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -144,6 +151,21 @@ def normalize_excludes(globs: List[str]) -> List[str]:
     return normalized
 
 
+def normalize_extension(ext: str) -> str:
+    return ext.strip().lstrip(".").lower()
+
+
+def normalize_extensions(exts: List[str]) -> List[str]:
+    seen = builtins.set()
+    normalized: List[str] = []
+    for ext in exts:
+        norm = normalize_extension(ext)
+        if norm and norm not in seen:
+            normalized.append(norm)
+            seen.add(norm)
+    return normalized
+
+
 def load_excludes(root: Path) -> List[str]:
     raw = load_state_payload(root)
     excludes = raw.get("excludes", [])
@@ -152,12 +174,26 @@ def load_excludes(root: Path) -> List[str]:
     return normalize_excludes([str(g) for g in excludes])
 
 
+def load_extensions(root: Path) -> List[str]:
+    raw = load_state_payload(root)
+    exts = raw.get("extensions", [])
+    if not isinstance(exts, list):
+        return DEFAULT_EXTENSIONS
+    normalized = normalize_extensions([str(ext) for ext in exts])
+    return normalized or DEFAULT_EXTENSIONS
+
+
 def save_state(
-    root: Path, items: Dict[str, FileProgress], excludes: Optional[List[str]] = None
+    root: Path,
+    items: Dict[str, FileProgress],
+    excludes: Optional[List[str]] = None,
+    extensions: Optional[List[str]] = None,
 ) -> None:
     p = state_path(root)
     if excludes is None:
         excludes = load_excludes(root)
+    if extensions is None:
+        extensions = load_extensions(root)
     files = {
         rel: {
             "total_loc": fp.total_loc,
@@ -170,6 +206,7 @@ def save_state(
         "version": 1,
         "files": files,
         "excludes": normalize_excludes(excludes),
+        "extensions": normalize_extensions(extensions),
     }
     p.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -179,22 +216,27 @@ def scan_repo(
     exclude: List[str],
     loc_mode: str,
     include_empty: bool,
+    extensions: List[str],
 ) -> Dict[str, Tuple[int, int]]:
     """
     Returns mapping rel_path -> (total_loc, mtime_ns)
     """
     results: Dict[str, Tuple[int, int]] = {}
-    for path in root.rglob("*.py"):
-        if not path.is_file():
-            continue
-        rel = path.relative_to(root).as_posix()
-        if is_excluded(rel, exclude):
-            continue
-        st = path.stat()
-        total = count_loc(path, mode=loc_mode)
-        if not include_empty and total == 0:
-            continue
-        results[rel] = (total, st.st_mtime_ns)
+    normalized_exts = normalize_extensions(extensions)
+    if not normalized_exts:
+        return results
+    for ext in normalized_exts:
+        for path in root.rglob(f"*.{ext}"):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root).as_posix()
+            if is_excluded(rel, exclude):
+                continue
+            st = path.stat()
+            total = count_loc(path, mode=loc_mode)
+            if not include_empty and total == 0:
+                continue
+            results[rel] = (total, st.st_mtime_ns)
     return results
 
 
@@ -267,6 +309,11 @@ def scan(
         "--exclude",
         help="Exclude glob for this run (repeatable), e.g. src/pkg/*",
     ),
+    ext: List[str] = typer.Option(
+        None,
+        "--ext",
+        help="Include file extension(s) for scan (repeatable), e.g. py",
+    ),
     include_empty: bool = typer.Option(
         False, "--include-empty", help="Include empty files (0 LOC) in scan"
     ),
@@ -276,9 +323,19 @@ def scan(
     """
     root = resolve_root(root)
     saved_excludes = load_excludes(root)
+    saved_extensions = load_extensions(root)
     ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     existing = load_state(root)
-    scanned = scan_repo(root, ex, loc_mode=loc_mode, include_empty=include_empty)
+    extensions = normalize_extensions(ext or saved_extensions)
+    if not extensions:
+        raise typer.BadParameter("No extensions provided.")
+    scanned = scan_repo(
+        root,
+        ex,
+        loc_mode=loc_mode,
+        include_empty=include_empty,
+        extensions=extensions,
+    )
 
     # Add/update scanned files, keep read_loc if present
     new_state: Dict[str, FileProgress] = {}
@@ -289,7 +346,7 @@ def scan(
         fp.clamp()
         new_state[rel] = fp
 
-    save_state(root, new_state, excludes=saved_excludes)
+    save_state(root, new_state, excludes=saved_excludes, extensions=extensions)
     total, read = totals(new_state)
     console.print(
         f"[green]Scanned[/green] {len(new_state)} files. Total {read}/{total} LOC read."
@@ -440,6 +497,85 @@ def exclude_clear(
 
 
 @app.command()
+def ext_add(
+    exts: List[str] = typer.Argument(..., help="Extensions to include, e.g. py md"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Add persistent file extensions for scans.
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    extensions = load_extensions(root)
+    to_add = normalize_extensions(exts)
+    if not to_add:
+        raise typer.BadParameter("No extensions provided.")
+    new_extensions = normalize_extensions(extensions + to_add)
+    added = [ext for ext in new_extensions if ext not in extensions]
+    save_state(root, items, extensions=new_extensions)
+    if added:
+        console.print("[green]Added extensions:[/green]")
+        for ext in added:
+            console.print(f"- {ext}")
+    else:
+        console.print("[yellow]No new extensions added.[/yellow]")
+
+
+@app.command()
+def ext_remove(
+    exts: List[str] = typer.Argument(..., help="Extensions to remove, e.g. py md"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Remove persistent file extensions for scans.
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    extensions = load_extensions(root)
+    to_remove = builtins.set(normalize_extensions(exts))
+    if not to_remove:
+        raise typer.BadParameter("No extensions provided.")
+    removed = [ext for ext in extensions if ext in to_remove]
+    new_extensions = [ext for ext in extensions if ext not in to_remove]
+    if not new_extensions:
+        raise typer.BadParameter("At least one extension is required.")
+    save_state(root, items, extensions=new_extensions)
+    if removed:
+        console.print("[green]Removed extensions:[/green]")
+        for ext in removed:
+            console.print(f"- {ext}")
+    else:
+        console.print("[yellow]No matching extensions found.[/yellow]")
+
+
+@app.command()
+def ext_list(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    List saved file extensions used for scans.
+    """
+    root = resolve_root(root)
+    extensions = load_extensions(root)
+    console.print("[bold]Extensions used for scan[/bold]")
+    for ext in extensions:
+        console.print(f"- {ext}")
+
+
+@app.command()
+def ext_clear(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    """
+    Reset extensions to the default list.
+    """
+    root = resolve_root(root)
+    items = load_state(root)
+    save_state(root, items, extensions=DEFAULT_EXTENSIONS)
+    console.print("[green]Reset extensions to defaults.[/green]")
+
+
+@app.command()
 def set(
     path: str = typer.Argument(
         ..., help="File path (relative to root or absolute under root)"
@@ -504,6 +640,11 @@ def update(
     exclude: List[str] = typer.Option(
         None, "--exclude", help="Exclude glob for this run (repeatable)"
     ),
+    ext: List[str] = typer.Option(
+        None,
+        "--ext",
+        help="Include file extension(s) for scan (repeatable), e.g. py",
+    ),
     include_empty: bool = typer.Option(
         False, "--include-empty", help="Include empty files (0 LOC) in scan"
     ),
@@ -513,9 +654,19 @@ def update(
     """
     root = resolve_root(root)
     saved_excludes = load_excludes(root)
+    saved_extensions = load_extensions(root)
     ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
     items = require_state(root)
-    scanned = scan_repo(root, ex, loc_mode=loc_mode, include_empty=include_empty)
+    extensions = normalize_extensions(ext or saved_extensions)
+    if not extensions:
+        raise typer.BadParameter("No extensions provided.")
+    scanned = scan_repo(
+        root,
+        ex,
+        loc_mode=loc_mode,
+        include_empty=include_empty,
+        extensions=extensions,
+    )
 
     changed: List[Tuple[str, FileProgress, int, int]] = []
     removed: List[str] = []
@@ -562,7 +713,12 @@ def update(
             total, mtime = scanned[rel]
             items[rel] = FileProgress(rel, total, 0, mtime)
 
-    save_state(root, items, excludes=saved_excludes)
+    save_state(
+        root,
+        items,
+        excludes=saved_excludes,
+        extensions=extensions,
+    )
     total, read = totals(items)
     console.print(f"\nSaved. Total {read}/{total} LOC read.")
 
