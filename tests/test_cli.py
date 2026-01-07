@@ -89,3 +89,30 @@ def test_export_md_marks_completed_with_x(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "- [x] done.py" in result.output
     assert "- [ ] todo.py" in result.output
+
+
+def test_update_handles_removed_changed_and_new_files(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("print('a')\n", encoding="utf-8")
+    (tmp_path / "b.py").write_text("print('b')\n", encoding="utf-8")
+    scan(root=tmp_path, loc_mode="physical", exclude=None)
+
+    items = load_state(tmp_path)
+    items["a.py"].read_loc = 1
+    save_state(tmp_path, items)
+
+    (tmp_path / "a.py").write_text("print('a')\nprint('a2')\n", encoding="utf-8")
+    (tmp_path / "b.py").unlink()
+    (tmp_path / "c.py").write_text("print('c')\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["update", "--root", str(tmp_path)],
+        input="y\nn\n",
+    )
+    assert result.exit_code == 0
+
+    updated = load_state(tmp_path)
+    assert "b.py" not in updated
+    assert "c.py" in updated
+    assert updated["a.py"].total_loc == 2
+    assert updated["a.py"].read_loc == 1
