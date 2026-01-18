@@ -27,13 +27,25 @@ The main way to use vibemark is via PyPI under the `vibemark` package:
 - Persistently exclude a folder (saved in `.vibemark.json`):
   - `vibemark exclude-add "src/vendor/*"`
 
+## More commands
+
+- `vibemark update` re-scan and optionally reset changed files
+- `vibemark reset path/to/file.py` mark a file unread
+- `vibemark dash` interactive dashboard
+- `vibemark export-md` export a markdown checklist
+- `vibemark exclude-remove|exclude-list|exclude-clear`
+- `vibemark ext-add|ext-remove|ext-list|ext-clear`
+- `vibemark --version`
+
 ## How it works
 
 `vibemark` looks for `*.py` files under the repo root, applies default exclusions
 (e.g., `.git/`, `.venv/`, `build/`), and writes state to `.vibemark.json` in the
 root directory. You can add saved exclude globs like `src/vendor/*` or pass
-`--exclude` to a single scan. Use `vibemark update` to rescan and optionally reset
-progress for changed files.
+`--exclude` to a single scan. You can also include other extensions via `--ext`
+or the `ext-*` commands. Use `vibemark update` to rescan and optionally reset
+progress for changed files. For finer control, `scan`/`update` accept `--loc-mode`
+(`physical|nonempty`) and `--include-empty`.
 
 ## Development
 
