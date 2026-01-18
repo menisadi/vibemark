@@ -3,6 +3,7 @@ name = "vibemark"
 version = "1.2.0"
 description = "If you are not writing it, you should at least read it."
 readme = "README.md"
+license = { file = "LICENSE" }
 authors = [
     { name = "menisadi", email = "menisadi@gmail.com" }
 ]
