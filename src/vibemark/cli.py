@@ -648,11 +648,19 @@ def update(
     include_empty: bool = typer.Option(
         False, "--include-empty", help="Include empty files (0 LOC) in scan"
     ),
+    reset_changed: str = typer.Option(
+        "ask",
+        "--reset-changed",
+        help="Reset progress for changed files: ask|yes|no",
+    ),
 ) -> None:
     """
     Re-scan and detect modified files.
     """
     root = resolve_root(root)
+    reset_changed = reset_changed.lower()
+    if reset_changed not in {"ask", "yes", "no"}:
+        raise typer.BadParameter("Invalid --reset-changed value. Use ask, yes, or no.")
     saved_excludes = load_excludes(root)
     saved_extensions = load_extensions(root)
     ex = DEFAULT_EXCLUDES + saved_excludes + (exclude or [])
@@ -694,10 +702,14 @@ def update(
         for rel, fp, new_total, new_mtime in sorted(changed, key=lambda x: x[0]):
             console.print(f"\n[bold]{rel}[/bold]")
             console.print(f"  was: {fp.read_loc}/{fp.total_loc}  now LOC: {new_total}")
-            if fp.read_loc > 0 and Confirm.ask(
-                "Reset progress for this file?", default=False
-            ):
-                fp.read_loc = 0
+            if fp.read_loc > 0:
+                should_reset = reset_changed == "yes"
+                if reset_changed == "ask":
+                    should_reset = Confirm.ask(
+                        "Reset progress for this file?", default=False
+                    )
+                if should_reset:
+                    fp.read_loc = 0
             # Always update metadata & clamp
             fp.total_loc = new_total
             fp.mtime_ns = new_mtime

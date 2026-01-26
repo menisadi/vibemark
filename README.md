@@ -30,6 +30,7 @@ The main way to use vibemark is via PyPI under the `vibemark` package:
 ## More commands
 
 - `vibemark update` re-scan and optionally reset changed files
+- `vibemark update --reset-changed yes|no` skip per-file prompts (default: ask)
 - `vibemark reset path/to/file.py` mark a file unread
 - `vibemark dash` interactive dashboard
 - `vibemark export-md` export a markdown checklist
