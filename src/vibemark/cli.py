@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Tuple, cast
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm
 from rich import box
 
 from vibemark import __version__
@@ -756,94 +756,6 @@ def export_md(
         lines.append(f"- [{checked}] {fp.path}  {fp.total_loc} LOC{extra}")
 
     console.print("\n".join(lines), markup=False)
-
-
-@app.command()
-def dash(
-    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
-) -> None:
-    """
-    Simple interactive dashboard loop (select by #, mark done, set read LOC, reset).
-    """
-    root = resolve_root(root)
-    items = require_state(root)
-
-    while True:
-        console.clear()
-        total, read = totals(items)
-        pct = (read / total * 100.0) if total else 0.0
-        console.print(f"[bold]Total:[/bold] {read}/{total} LOC read ({pct:.1f}%)\n")
-        table = render_table(items, limit=300)
-        console.print(table)
-
-        console.print(
-            "\nCommands: [bold]pick[/bold] (number) | [bold]set[/bold] | [bold]done[/bold] | [bold]reset[/bold] | [bold]stats[/bold] | [bold]save[/bold] | [bold]q[/bold]"
-        )
-        cmd = Prompt.ask("vibemark").strip().lower()
-
-        if cmd in {"q", "quit", "exit"}:
-            save_state(root, items)
-            return
-
-        if cmd in {"save"}:
-            save_state(root, items)
-            continue
-
-        if cmd in {"stats"}:
-            save_state(root, items)
-            console.print()
-            stats(root=root, top=15)  # reuse
-            Prompt.ask("\nPress Enter to continue", default="")
-            continue
-
-        # allow "pick 12" or just "12"
-        parts = cmd.split()
-        if len(parts) == 1 and parts[0].isdigit():
-            parts = ["pick", parts[0]]
-
-        if len(parts) >= 2 and parts[0] == "pick" and parts[1].isdigit():
-            idx = int(parts[1])
-            rows = sorted(
-                items.values(),
-                key=lambda fp: (fp.status != "unread", fp.status != "partial", fp.path),
-            )
-            if not (1 <= idx <= len(rows)):
-                continue
-            fp = rows[idx - 1]
-            console.print(
-                f"\nSelected: [bold]{fp.path}[/bold] ({fp.read_loc}/{fp.total_loc})"
-            )
-            action = Prompt.ask(
-                "Action", choices=["set", "done", "reset", "back"], default="back"
-            )
-            if action == "set":
-                val = int(Prompt.ask("Read LOC", default=str(fp.read_loc)))
-                fp.read_loc = val
-                fp.clamp()
-            elif action == "done":
-                fp.read_loc = fp.total_loc
-            elif action == "reset":
-                fp.read_loc = 0
-            continue
-
-        # direct actions with a path
-        if parts and parts[0] in {"set", "done", "reset"}:
-            if parts[0] == "set":
-                p = Prompt.ask("Path")
-                r = int(Prompt.ask("Read LOC", default="0"))
-                rel = normalize_path_arg(root, p)
-                if rel in items:
-                    items[rel].read_loc = r
-                    items[rel].clamp()
-            else:
-                p = Prompt.ask("Path")
-                rel = normalize_path_arg(root, p)
-                if rel in items:
-                    if parts[0] == "done":
-                        items[rel].read_loc = items[rel].total_loc
-                    else:
-                        items[rel].read_loc = 0
-            continue
 
 
 if __name__ == "__main__":

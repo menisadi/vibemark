@@ -2,6 +2,10 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.2.3 - 2026-02-17
+
+- Removed `dash` interactive dashboard command to keep the interface focused on Unix-style CLI workflows.
+
 ## 1.2.2 - 2026-01-26
 
 - Added `update --reset-changed yes|no` to skip per-file prompts.
