@@ -2,6 +2,21 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.0 - 2026-02-18
+
+- Grouped persistent exclude commands under `exclude` subcommands:
+  - `vibemark exclude add`
+  - `vibemark exclude remove`
+  - `vibemark exclude list`
+  - `vibemark exclude clear`
+- Grouped persistent extension commands under `ext` subcommands:
+  - `vibemark ext add`
+  - `vibemark ext remove`
+  - `vibemark ext list`
+  - `vibemark ext clear`
+- Kept legacy dash-style commands (`exclude-add`, `exclude-remove`, `exclude-list`, `exclude-clear`, `ext-add`, `ext-remove`, `ext-list`, `ext-clear`) as hidden aliases for backward compatibility.
+- Updated README examples and added CLI tests for new subcommand paths and legacy alias compatibility.
+
 ## 1.2.3 - 2026-02-17
 
 - Removed `dash` interactive dashboard command to keep the interface focused on Unix-style CLI workflows.
