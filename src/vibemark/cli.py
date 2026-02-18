@@ -19,6 +19,8 @@ from vibemark import __version__
 app = typer.Typer(
     add_completion=False, help="vibemark — track code reading progress by LOC"
 )
+exclude_app = typer.Typer(help="Manage persistent exclude globs.")
+app.add_typer(exclude_app, name="exclude")
 console = Console()
 
 STATE_FILENAME = ".vibemark.json"
@@ -413,7 +415,7 @@ def normalize_path_arg(root: Path, p: str) -> str:
     return path.as_posix().replace("\\", "/")
 
 
-@app.command()
+@exclude_app.command("add")
 def exclude_add(
     globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
@@ -438,7 +440,7 @@ def exclude_add(
         console.print("[yellow]No new excludes added.[/yellow]")
 
 
-@app.command()
+@exclude_app.command("remove")
 def exclude_remove(
     globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
@@ -463,7 +465,7 @@ def exclude_remove(
         console.print("[yellow]No matching excludes found.[/yellow]")
 
 
-@app.command()
+@exclude_app.command("list")
 def exclude_list(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
@@ -483,7 +485,7 @@ def exclude_list(
         console.print(f"- {glob}")
 
 
-@app.command()
+@exclude_app.command("clear")
 def exclude_clear(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
@@ -494,6 +496,36 @@ def exclude_clear(
     items = load_state(root)
     save_state(root, items, excludes=[])
     console.print("[green]Cleared saved excludes.[/green]")
+
+
+@app.command("exclude-add", hidden=True)
+def exclude_add_legacy(
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    exclude_add(globs=globs, root=root)
+
+
+@app.command("exclude-remove", hidden=True)
+def exclude_remove_legacy(
+    globs: List[str] = typer.Argument(..., help="Exclude glob(s), e.g. src/pkg/*"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    exclude_remove(globs=globs, root=root)
+
+
+@app.command("exclude-list", hidden=True)
+def exclude_list_legacy(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    exclude_list(root=root)
+
+
+@app.command("exclude-clear", hidden=True)
+def exclude_clear_legacy(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    exclude_clear(root=root)
 
 
 @app.command()

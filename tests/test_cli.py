@@ -96,6 +96,24 @@ def test_version_flag_prints_version() -> None:
     assert __version__ in result.output
 
 
+def test_exclude_subcommands_add_and_list(tmp_path: Path) -> None:
+    add_result = runner.invoke(
+        app, ["exclude", "add", "skip/*", "--root", str(tmp_path)]
+    )
+    assert add_result.exit_code == 0
+    assert load_excludes(tmp_path) == ["skip/*"]
+
+    list_result = runner.invoke(app, ["exclude", "list", "--root", str(tmp_path)])
+    assert list_result.exit_code == 0
+    assert "skip/*" in list_result.output
+
+
+def test_exclude_legacy_command_still_works(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["exclude-add", "skip/*", "--root", str(tmp_path)])
+    assert result.exit_code == 0
+    assert load_excludes(tmp_path) == ["skip/*"]
+
+
 def test_export_md_marks_completed_with_x(tmp_path: Path) -> None:
     items = {
         "done.py": FileProgress("done.py", total_loc=5, read_loc=5, mtime_ns=0),
