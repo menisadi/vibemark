@@ -20,7 +20,9 @@ app = typer.Typer(
     add_completion=False, help="vibemark — track code reading progress by LOC"
 )
 exclude_app = typer.Typer(help="Manage persistent exclude globs.")
+ext_app = typer.Typer(help="Manage persistent scan extensions.")
 app.add_typer(exclude_app, name="exclude")
+app.add_typer(ext_app, name="ext")
 console = Console()
 
 STATE_FILENAME = ".vibemark.json"
@@ -528,7 +530,7 @@ def exclude_clear_legacy(
     exclude_clear(root=root)
 
 
-@app.command()
+@ext_app.command("add")
 def ext_add(
     exts: List[str] = typer.Argument(..., help="Extensions to include, e.g. py md"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
@@ -553,7 +555,7 @@ def ext_add(
         console.print("[yellow]No new extensions added.[/yellow]")
 
 
-@app.command()
+@ext_app.command("remove")
 def ext_remove(
     exts: List[str] = typer.Argument(..., help="Extensions to remove, e.g. py md"),
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
@@ -580,7 +582,7 @@ def ext_remove(
         console.print("[yellow]No matching extensions found.[/yellow]")
 
 
-@app.command()
+@ext_app.command("list")
 def ext_list(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
@@ -594,7 +596,7 @@ def ext_list(
         console.print(f"- {ext}")
 
 
-@app.command()
+@ext_app.command("clear")
 def ext_clear(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
 ) -> None:
@@ -605,6 +607,36 @@ def ext_clear(
     items = load_state(root)
     save_state(root, items, extensions=DEFAULT_EXTENSIONS)
     console.print("[green]Reset extensions to defaults.[/green]")
+
+
+@app.command("ext-add", hidden=True)
+def ext_add_legacy(
+    exts: List[str] = typer.Argument(..., help="Extensions to include, e.g. py md"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    ext_add(exts=exts, root=root)
+
+
+@app.command("ext-remove", hidden=True)
+def ext_remove_legacy(
+    exts: List[str] = typer.Argument(..., help="Extensions to remove, e.g. py md"),
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    ext_remove(exts=exts, root=root)
+
+
+@app.command("ext-list", hidden=True)
+def ext_list_legacy(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    ext_list(root=root)
+
+
+@app.command("ext-clear", hidden=True)
+def ext_clear_legacy(
+    root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
+) -> None:
+    ext_clear(root=root)
 
 
 @app.command()

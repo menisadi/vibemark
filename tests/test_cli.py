@@ -114,6 +114,23 @@ def test_exclude_legacy_command_still_works(tmp_path: Path) -> None:
     assert load_excludes(tmp_path) == ["skip/*"]
 
 
+def test_ext_subcommands_add_and_list(tmp_path: Path) -> None:
+    add_result = runner.invoke(app, ["ext", "add", "js", "--root", str(tmp_path)])
+    assert add_result.exit_code == 0
+    assert load_extensions(tmp_path) == ["py", "js"]
+
+    list_result = runner.invoke(app, ["ext", "list", "--root", str(tmp_path)])
+    assert list_result.exit_code == 0
+    assert "py" in list_result.output
+    assert "js" in list_result.output
+
+
+def test_ext_legacy_command_still_works(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["ext-add", "js", "--root", str(tmp_path)])
+    assert result.exit_code == 0
+    assert load_extensions(tmp_path) == ["py", "js"]
+
+
 def test_export_md_marks_completed_with_x(tmp_path: Path) -> None:
     items = {
         "done.py": FileProgress("done.py", total_loc=5, read_loc=5, mtime_ns=0),

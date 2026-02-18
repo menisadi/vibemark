@@ -34,7 +34,7 @@ The main way to use vibemark is via PyPI under the `vibemark` package:
 - `vibemark reset path/to/file.py` mark a file unread
 - `vibemark export-md` export a markdown checklist
 - `vibemark exclude remove|list|clear`
-- `vibemark ext-add|ext-remove|ext-list|ext-clear`
+- `vibemark ext add|remove|list|clear`
 - `vibemark --version`
 
 ## How it works
