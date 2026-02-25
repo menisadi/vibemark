@@ -2,6 +2,12 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.1 - 2026-02-25
+
+- Added `vibemark stats --all` to show the full remaining-files table instead of only top-k rows.
+- Kept `--top` behavior for top-k output and added validation to require `--top > 0` unless `--all` is used.
+- Added CLI tests covering `stats --all` output and `--top 0` validation behavior.
+
 ## 1.3.0 - 2026-02-18
 
 - Grouped persistent exclude commands under `exclude` subcommands:
