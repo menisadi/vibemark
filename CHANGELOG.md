@@ -2,6 +2,12 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.2 - 2026-02-25
+
+- Added `vibemark stats --no-table` to print only total progress without the remaining-files table.
+- Updated `stats` behavior so `--top` validation is skipped when `--no-table` is used.
+- Added CLI tests for totals-only output and `--top 0 --no-table`.
+
 ## 1.3.1 - 2026-02-25
 
 - Added `vibemark stats --all` to show the full remaining-files table instead of only top-k rows.
