@@ -362,6 +362,9 @@ def stats(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     top: int = typer.Option(15, help="Show top N remaining by LOC"),
     all: bool = typer.Option(False, "--all", help="Show all remaining files"),
+    no_table: bool = typer.Option(
+        False, "--no-table", help="Show only totals without remaining files table"
+    ),
 ) -> None:
     """
     Show total progress and largest remaining files.
@@ -377,6 +380,9 @@ def stats(
     console.print(
         f"Total: [bold]{read}/{total}[/bold] LOC read  ([bold]{pct:.1f}%[/bold])"
     )
+
+    if no_table:
+        return
 
     if top <= 0 and not all:
         raise typer.BadParameter("--top must be > 0 unless --all is provided.")

@@ -199,3 +199,34 @@ def test_stats_top_must_be_positive_without_all(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "--top must be > 0 unless --all is provided." in result.output
+
+
+def test_stats_no_table_shows_totals_only(tmp_path: Path) -> None:
+    items = {
+        "a.py": FileProgress("a.py", total_loc=10, read_loc=0, mtime_ns=0),
+        "b.py": FileProgress("b.py", total_loc=8, read_loc=3, mtime_ns=0),
+    }
+    save_state(tmp_path, items)
+
+    result = runner.invoke(app, ["stats", "--root", str(tmp_path), "--no-table"])
+
+    assert result.exit_code == 0
+    assert "Total:" in result.output
+    assert "Top 15 remaining" not in result.output
+    assert "All remaining" not in result.output
+    assert "a.py" not in result.output
+    assert "b.py" not in result.output
+
+
+def test_stats_no_table_allows_nonpositive_top(tmp_path: Path) -> None:
+    items = {
+        "a.py": FileProgress("a.py", total_loc=10, read_loc=0, mtime_ns=0),
+    }
+    save_state(tmp_path, items)
+
+    result = runner.invoke(
+        app, ["stats", "--root", str(tmp_path), "--top", "0", "--no-table"]
+    )
+
+    assert result.exit_code == 0
+    assert "Total:" in result.output
