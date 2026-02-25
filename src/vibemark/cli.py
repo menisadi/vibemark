@@ -361,6 +361,7 @@ def scan(
 def stats(
     root: Optional[Path] = typer.Option(None, help="Repo root (default: cwd)"),
     top: int = typer.Option(15, help="Show top N remaining by LOC"),
+    all: bool = typer.Option(False, "--all", help="Show all remaining files"),
 ) -> None:
     """
     Show total progress and largest remaining files.
@@ -377,16 +378,20 @@ def stats(
         f"Total: [bold]{read}/{total}[/bold] LOC read  ([bold]{pct:.1f}%[/bold])"
     )
 
-    if top <= 0:
-        return
+    if top <= 0 and not all:
+        raise typer.BadParameter("--top must be > 0 unless --all is provided.")
 
     remaining = sorted(
         (fp for fp in items.values() if fp.read_loc < fp.total_loc),
         key=lambda fp: (fp.total_loc - fp.read_loc),
         reverse=True,
-    )[:top]
+    )
 
-    t = Table(title=f"Top {top} remaining", box=box.SIMPLE)
+    if not all:
+        remaining = remaining[:top]
+
+    title = "All remaining" if all else f"Top {top} remaining"
+    t = Table(title=title, box=box.SIMPLE)
     t.add_column("Remaining", justify="right")
     t.add_column("Read", justify="right")
     t.add_column("LOC", justify="right")

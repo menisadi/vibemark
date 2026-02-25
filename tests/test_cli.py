@@ -170,3 +170,32 @@ def test_update_handles_removed_changed_and_new_files(tmp_path: Path) -> None:
     assert "c.py" in updated
     assert updated["a.py"].total_loc == 2
     assert updated["a.py"].read_loc == 1
+
+
+def test_stats_all_shows_all_remaining(tmp_path: Path) -> None:
+    items = {
+        "a.py": FileProgress("a.py", total_loc=10, read_loc=0, mtime_ns=0),
+        "b.py": FileProgress("b.py", total_loc=8, read_loc=3, mtime_ns=0),
+        "done.py": FileProgress("done.py", total_loc=5, read_loc=5, mtime_ns=0),
+    }
+    save_state(tmp_path, items)
+
+    result = runner.invoke(app, ["stats", "--root", str(tmp_path), "--all"])
+
+    assert result.exit_code == 0
+    assert "All remaining" in result.output
+    assert "a.py" in result.output
+    assert "b.py" in result.output
+    assert "done.py" not in result.output
+
+
+def test_stats_top_must_be_positive_without_all(tmp_path: Path) -> None:
+    items = {
+        "a.py": FileProgress("a.py", total_loc=10, read_loc=0, mtime_ns=0),
+    }
+    save_state(tmp_path, items)
+
+    result = runner.invoke(app, ["stats", "--root", str(tmp_path), "--top", "0"])
+
+    assert result.exit_code != 0
+    assert "--top must be > 0 unless --all is provided." in result.output
