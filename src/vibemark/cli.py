@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import builtins
+import csv
 import fnmatch
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
@@ -365,6 +367,9 @@ def stats(
     no_table: bool = typer.Option(
         False, "--no-table", help="Show only totals without remaining files table"
     ),
+    format: str = typer.Option(
+        "table", "--format", help="Output format: table|csv|tsv"
+    ),
 ) -> None:
     """
     Show total progress and largest remaining files.
@@ -374,6 +379,25 @@ def stats(
     if not items:
         console.print("[yellow]No state found. Run[/yellow] vibemark scan")
         raise typer.Exit(1)
+
+    fmt = format.lower()
+    if fmt not in {"table", "csv", "tsv"}:
+        raise typer.BadParameter("--format must be table, csv, or tsv")
+
+    if fmt in {"csv", "tsv"}:
+        remaining = sorted(
+            (fp for fp in items.values() if fp.read_loc < fp.total_loc),
+            key=lambda fp: (fp.total_loc - fp.read_loc),
+            reverse=True,
+        )
+        if not all:
+            remaining = remaining[:top]
+        delimiter = "\t" if fmt == "tsv" else ","
+        writer = csv.writer(sys.stdout, delimiter=delimiter)
+        writer.writerow(["file", "status", "read", "total", "remaining"])
+        for fp in remaining:
+            writer.writerow([fp.path, fp.status, fp.read_loc, fp.total_loc, fp.total_loc - fp.read_loc])
+        return
 
     total, read = totals(items)
     pct = (read / total * 100.0) if total else 0.0
