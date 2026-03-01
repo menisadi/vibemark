@@ -2,6 +2,12 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.3 - 2026-03-01
+
+- Added `vibemark stats --format csv|tsv` to output remaining-files data as CSV or TSV instead of a Rich table, enabling piping into tools like `qsv`, `duckdb`, `visidata`, and `awk`.
+- Summary line is suppressed in CSV/TSV mode to keep stdout clean for piping.
+- Output columns: `file`, `status`, `read`, `total`, `remaining`.
+
 ## 1.3.2 - 2026-02-25
 
 - Added `vibemark stats --no-table` to print only total progress without the remaining-files table.
