@@ -370,6 +370,9 @@ def stats(
     format: str = typer.Option(
         "table", "--format", help="Output format: table|csv|tsv"
     ),
+    include_done: bool = typer.Option(
+        False, "--include-done", "-d", help="Also show fully-read files"
+    ),
 ) -> None:
     """
     Show total progress and largest remaining files.
@@ -392,6 +395,13 @@ def stats(
         )
         if not all:
             remaining = remaining[:top]
+        if include_done:
+            done_files = sorted(
+                (fp for fp in items.values() if fp.read_loc >= fp.total_loc),
+                key=lambda fp: fp.total_loc,
+                reverse=True,
+            )
+            remaining = remaining + done_files
         delimiter = "\t" if fmt == "tsv" else ","
         writer = csv.writer(sys.stdout, delimiter=delimiter)
         writer.writerow(["file", "status", "read", "total", "remaining"])
@@ -429,6 +439,21 @@ def stats(
     for fp in remaining:
         rem = fp.total_loc - fp.read_loc
         t.add_row(str(rem), f"{fp.read_loc}/{fp.total_loc}", str(fp.total_loc), fp.path)
+
+    if include_done:
+        done_files = sorted(
+            (fp for fp in items.values() if fp.read_loc >= fp.total_loc),
+            key=lambda fp: fp.total_loc,
+            reverse=True,
+        )
+        for fp in done_files:
+            t.add_row(
+                "[dim]0[/dim]",
+                f"[dim]{fp.read_loc}/{fp.total_loc}[/dim]",
+                f"[dim]{fp.total_loc}[/dim]",
+                f"[dim]{fp.path}[/dim]",
+            )
+
     console.print(t)
 
 
