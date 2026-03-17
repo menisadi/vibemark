@@ -2,6 +2,12 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.4 - 2026-03-17
+
+- Added `vibemark stats --include-done` (`-d`) to also show fully-read files in the output.
+- Done files appear at the bottom of the table, rendered in dim text with `0` remaining LOC.
+- In CSV/TSV mode, done files are appended as rows with `status=done` and `remaining=0`.
+
 ## 1.3.3 - 2026-03-01
 
 - Added `vibemark stats --format csv|tsv` to output remaining-files data as CSV or TSV instead of a Rich table, enabling piping into tools like `qsv`, `duckdb`, `visidata`, and `awk`.
