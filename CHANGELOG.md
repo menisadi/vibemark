@@ -2,6 +2,10 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.5 - 2026-03-17
+
+- Added `vibemark --color` global flag to force ANSI color output when piping (e.g. `vibemark --color stats | less -R`).
+
 ## 1.3.4 - 2026-03-17
 
 - Added `vibemark stats --include-done` (`-d`) to also show fully-read files in the output.

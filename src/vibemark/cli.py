@@ -299,10 +299,18 @@ def main(
         is_eager=True,
         callback=_version_callback,
     ),
+    color: bool = typer.Option(
+        False,
+        "--color",
+        help="Force color output even when piping (e.g. to less -R)",
+    ),
 ) -> None:
     """
     vibemark — track code reading progress by LOC
     """
+    global console
+    if color:
+        console = Console(force_terminal=True)
     return None
 
 
