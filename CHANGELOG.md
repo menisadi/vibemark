@@ -2,6 +2,10 @@
 
 Entries below are compiled from the git log and tags.
 
+## 1.3.6 - 2026-03-26
+
+- Added `vibemark stats --exclude` to filter out files matching glob patterns from stats output for a single run (display-only, does not modify `.vibemark.json`).
+
 ## 1.3.5 - 2026-03-17
 
 - Added `vibemark --color` global flag to force ANSI color output when piping (e.g. `vibemark --color stats | less -R`).
