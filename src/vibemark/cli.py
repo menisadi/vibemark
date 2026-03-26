@@ -381,6 +381,11 @@ def stats(
     include_done: bool = typer.Option(
         False, "--include-done", "-d", help="Also show fully-read files"
     ),
+    exclude: List[str] = typer.Option(
+        None,
+        "--exclude",
+        help="Exclude glob for this run (repeatable), e.g. src/pkg/*",
+    ),
 ) -> None:
     """
     Show total progress and largest remaining files.
@@ -390,6 +395,13 @@ def stats(
     if not items:
         console.print("[yellow]No state found. Run[/yellow] vibemark scan")
         raise typer.Exit(1)
+
+    if exclude:
+        items = {
+            rel: fp
+            for rel, fp in items.items()
+            if not is_excluded(rel, exclude)
+        }
 
     fmt = format.lower()
     if fmt not in {"table", "csv", "tsv"}:
